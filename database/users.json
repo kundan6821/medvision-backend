@@ -1,0 +1,23 @@
+{
+  "users": [
+    {
+      "id": "1775413733517",
+      "name": "tester",
+      "email": "test@test.com",
+      "password": "$2b$10$LMaxGgW.zAyo2CxASVFeouKTR2v7T7RCOnAYpES9jtbeJnb14Qmsq",
+      "allergies": [],
+      "createdAt": "2026-04-05T18:28:53.517Z"
+    },
+    {
+      "id": "1775413857456",
+      "name": "kundan",
+      "email": "kundan6821@gmail.com",
+      "password": "$2b$10$bvJe94CbqanP.wIk.3aK5.T5DY9RLbdORSKtUyuWXiIoHYJWSs3Xi",
+      "allergies": [
+        "aspirin",
+        "ciprofloxacin"
+      ],
+      "createdAt": "2026-04-05T18:30:57.456Z"
+    }
+  ]
+}
