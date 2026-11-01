@@ -18,6 +18,14 @@
         "ciprofloxacin"
       ],
       "createdAt": "2026-04-05T18:30:57.456Z"
+    },
+    {
+      "id": "1793562226467",
+      "name": "chandan",
+      "email": "chandan123@gmail.com",
+      "password": "$2b$10$3J8qXw2QkaID7f7i58QOXeRCuARZaDutSNTalUmPvzo7drBHiSL9G",
+      "allergies": [],
+      "createdAt": "2026-11-01T19:43:46.468Z"
     }
   ]
 }

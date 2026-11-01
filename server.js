@@ -1,5 +1,14 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// Fix for querySrv ECONNREFUSED on networks/ISPs that fail or block DNS SRV lookups
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+} catch (e) {
+  // Ignore if custom DNS cannot be set
+}
+
 const config = require('./config/env.config');
 const medicineRoutes = require('./routes/medicine.routes');
 const authRoutes = require('./routes/auth.routes');
@@ -61,7 +70,11 @@ app.listen(PORT, () => {
 if (!config.mongoUri) {
   console.error('WARNING: MONGO_URI environment variable is not defined!');
 } else {
-  mongoose.connect(config.mongoUri)
+  mongoose.connect(config.mongoUri, {
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+    family: 4
+  })
     .then(() => {
       console.log('Connected to MongoDB');
     })

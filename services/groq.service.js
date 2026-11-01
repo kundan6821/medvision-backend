@@ -1,27 +1,22 @@
 const axios = require('axios');
-const config = require('../config/env.config');
 
 class GroqService {
-  constructor(apiKey = config.groqApiKey) {
+  constructor(apiKey = process.env.NV_API_KEY) {
     this.apiKey = apiKey;
-    this.baseURL = 'https://api.groq.com/openai/v1/chat/completions';
-    this.model = 'llama-3.3-70b-versatile';
+    this.baseURL = 'https://integrate.api.nvidia.com/v1/chat/completions';
+    this.model = 'nvidia/nemotron-3.5-bolt-e4b';
   }
-
-  // ─── Standard extraction (no allergy context) ──────────────────────────────
 
   async extractMedicineInfo(medicineName) {
     const prompt = this._buildPrompt(medicineName);
     try {
-      const response = await this._callGroq(prompt, this._standardSystemPrompt());
+      const response = await this._callAPI(prompt, this._standardSystemPrompt());
       const content = response.data.choices[0].message.content;
       return this.parseJSON(content);
     } catch (error) {
-      throw new Error(`Groq API error: ${error.response?.data?.error?.message || error.message}`);
+      throw new Error(`NVIDIA API error: ${error.response?.data?.detail || error.response?.data?.error?.message || error.message}`);
     }
   }
-
-  // ─── Allergy-aware extraction ──────────────────────────────────────────────
 
   async extractMedicineInfoWithAllergies(medicineName, allergies = []) {
     if (!allergies || allergies.length === 0) {
@@ -30,15 +25,13 @@ class GroqService {
     const allergyList = allergies.join(', ');
     const prompt = this._buildAllergyPrompt(medicineName, allergyList);
     try {
-      const response = await this._callGroq(prompt, this._allergySystemPrompt(allergyList));
+      const response = await this._callAPI(prompt, this._allergySystemPrompt(allergyList));
       const content = response.data.choices[0].message.content;
       return this.parseJSON(content);
     } catch (error) {
-      throw new Error(`Groq API error: ${error.response?.data?.error?.message || error.message}`);
+      throw new Error(`NVIDIA API error: ${error.response?.data?.detail || error.response?.data?.error?.message || error.message}`);
     }
   }
-
-  // ─── Private helpers ───────────────────────────────────────────────────────
 
   _buildPrompt(medicineName) {
     return `You are a pharmaceutical data extraction engine.
@@ -110,7 +103,7 @@ JSON format:
     return `You are a pharmaceutical safety engine. Patient allergies: ${allergyList}. Check for conflicts. Set allergy_warning: true if conflict exists. Mark each substitute with allergy_safe: true/false. Safe alternatives go first. Return only valid JSON.`;
   }
 
-  async _callGroq(prompt, systemPrompt) {
+  async _callAPI(prompt, systemPrompt) {
     return axios.post(
       this.baseURL,
       {
@@ -133,9 +126,11 @@ JSON format:
 
   parseJSON(content) {
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      // Strip markdown code blocks if present
+      const stripped = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      const jsonMatch = stripped.match(/\{[\s\S]*\}/);
       if (jsonMatch) return JSON.parse(jsonMatch[0]);
-      return JSON.parse(content);
+      return JSON.parse(stripped);
     } catch (error) {
       throw new Error('Failed to parse LLM response');
     }

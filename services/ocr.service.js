@@ -12,14 +12,14 @@ class OCRService {
       const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
       
       const payload = {
-        model: "meta/llama-3.2-90b-vision-instruct",
+        model: "mistralai/mistral-large-4-1t-a52b",
         messages: [
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "You are an expert pharmaceutical vision engine. Analyze this image of a medicine container (bottle, packet, blister pack). Identify and return ONLY the fundamental brand name or primary active ingredient. Do not include dosage (like 500mg), manufacturer paths, expiry dates, or conversation formatting. Just return the raw medicine name. If it is illegible, return exactly: UNKNOWN"
+                text: "Return ONLY the medicine name from this image. Nothing else. No explanation. No sentences. Just the name. Example: Paracetamol or Crocin. If unreadable, return: UNKNOWN"
               },
               {
                 type: "image_url",
@@ -50,8 +50,13 @@ class OCRService {
         }
       );
 
-      const rawContent = response.data.choices[0].message.content;
-      const medicineName = rawContent.trim().replace(/^"|"$/g, '').replace(/\.$/, ''); // Clean up any quotes or trailing periods
+      const rawContent = response.data.choices[0].message.content || response.data.choices[0].message.reasoning_content || '';
+      if (!rawContent) {
+        throw new Error('NVIDIA Vision returned empty response.');
+      }
+      // Grab first non-empty line only
+      const firstLine = rawContent.split('\n').map(l => l.trim()).find(l => l.length > 0) || '';
+      const medicineName = firstLine.replace(/^"|"$/g, '').replace(/\.$/, '').trim(); // Clean up any quotes or trailing periods
       
       if (!medicineName || medicineName === 'UNKNOWN') {
          throw new Error('NVIDIA Vision could not confidently decode a medicine name from this image.');

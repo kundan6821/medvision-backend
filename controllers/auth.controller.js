@@ -29,10 +29,11 @@ class AuthController {
 
       res.status(201).json({ success: true, token, user });
     } catch (error) {
+      console.error('Registration error:', error);
       if (error.message === 'Email already registered') {
         return res.status(409).json({ error: true, message: error.message });
       }
-      res.status(500).json({ error: true, message: 'Registration failed' });
+      res.status(500).json({ error: true, message: error.message || 'Registration failed' });
     }
   }
 
@@ -59,7 +60,8 @@ class AuthController {
 
       res.json({ success: true, token, user: safeUser });
     } catch (error) {
-      res.status(500).json({ error: true, message: 'Login failed' });
+      console.error('Login error:', error);
+      res.status(500).json({ error: true, message: error.message || 'Login failed' });
     }
   }
 
@@ -71,6 +73,7 @@ class AuthController {
       }
       res.json({ success: true, user: userService.safeUser(user) });
     } catch (error) {
+      console.error('GetMe error:', error);
       res.status(500).json({ error: true, message: 'Failed to fetch user' });
     }
   }
