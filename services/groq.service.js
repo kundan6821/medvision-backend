@@ -1,13 +1,16 @@
 const axios = require('axios');
 
 class GroqService {
-  constructor(apiKey = process.env.NV_API_KEY) {
+  constructor(apiKey = process.env.NV_API_KEY || process.env.NVIDIA_TEXT_KEY || process.env.NVIDIA_API_KEY) {
     this.apiKey = apiKey;
     this.baseURL = 'https://integrate.api.nvidia.com/v1/chat/completions';
     this.model = 'nvidia/nemotron-3.5-bolt-e4b';
   }
 
   async extractMedicineInfo(medicineName) {
+    if (!this.apiKey) {
+      throw new Error("NV_API_KEY environment variable is missing on server.");
+    }
     const prompt = this._buildPrompt(medicineName);
     try {
       const response = await this._callAPI(prompt, this._standardSystemPrompt());
@@ -19,6 +22,9 @@ class GroqService {
   }
 
   async extractMedicineInfoWithAllergies(medicineName, allergies = []) {
+    if (!this.apiKey) {
+      throw new Error("NV_API_KEY environment variable is missing on server.");
+    }
     if (!allergies || allergies.length === 0) {
       return this.extractMedicineInfo(medicineName);
     }
@@ -119,7 +125,8 @@ JSON format:
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 30000
       }
     );
   }
