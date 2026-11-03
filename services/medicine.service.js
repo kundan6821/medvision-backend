@@ -7,12 +7,32 @@ class MedicineService {
     this.priceService = priceService;
   }
 
+  checkDirectAllergy(name, composition, allergies = []) {
+    if (!allergies || allergies.length === 0) return null;
+    const textToCheck = `${name || ''} ${composition || ''}`.toLowerCase();
+    
+    for (const allergy of allergies) {
+      const a = (allergy || '').trim().toLowerCase();
+      if (!a) continue;
+      
+      const wordRegex = new RegExp(`(^|[^a-zA-Z0-9])${a}([^a-zA-Z0-9]|$)`, 'i');
+      if (wordRegex.test(textToCheck) || textToCheck.includes(a)) {
+        return {
+          warning: true,
+          details: `⚠️ ALLERGY CONFLICT DETECTED: This medicine (${name || composition}) contains or is derived from "${allergy}", which is in your logged medical allergy profile. Do NOT take this medication without consulting your physician.`
+        };
+      }
+    }
+    return null;
+  }
+
   async getMedicineInfo(medicineName, userAllergies = []) {
     const hasAllergies = userAllergies && userAllergies.length > 0;
     // Step 1: Check local database first
     const localMatch = this.priceService.findByBrandName(medicineName);
     
     if (localMatch) {
+      const directAllergy = this.checkDirectAllergy(localMatch.brand_name, localMatch.composition, userAllergies);
       const alternatives = this.priceService.findAlternatives(
         localMatch.composition,
         localMatch.strength,
@@ -44,8 +64,8 @@ class MedicineService {
           },
           uses: Array.isArray(aiInfo.common_uses) ? aiInfo.common_uses : [aiInfo.common_uses].filter(Boolean),
           sideEffects: aiInfo.common_side_effects || [],
-          allergyWarning: aiInfo.allergy_warning || false,
-          allergyDetails: aiInfo.allergy_details || null,
+          allergyWarning: directAllergy ? directAllergy.warning : (aiInfo.allergy_warning || false),
+          allergyDetails: directAllergy ? directAllergy.details : (aiInfo.allergy_details || null),
           alternatives,
           therapeuticAlternatives: therapeuticAlts,
           priceNote: null,
@@ -63,8 +83,8 @@ class MedicineService {
           },
           uses: [],
           sideEffects: [],
-          allergyWarning: false,
-          allergyDetails: null,
+          allergyWarning: directAllergy ? directAllergy.warning : false,
+          allergyDetails: directAllergy ? directAllergy.details : null,
           alternatives,
           therapeuticAlternatives: [],
           priceNote: null,
@@ -76,6 +96,7 @@ class MedicineService {
     // Step 1.5: Check if it's a generic composition name
     const compositionMatch = this.priceService.findByComposition(medicineName);
     if (compositionMatch) {
+      const directAllergy = this.checkDirectAllergy(compositionMatch.brand_name, compositionMatch.composition, userAllergies);
       const alternatives = this.priceService.findAlternatives(
         compositionMatch.composition,
         compositionMatch.strength,
@@ -107,8 +128,8 @@ class MedicineService {
           },
           uses: Array.isArray(aiInfo.common_uses) ? aiInfo.common_uses : [aiInfo.common_uses].filter(Boolean),
           sideEffects: aiInfo.common_side_effects || [],
-          allergyWarning: aiInfo.allergy_warning || false,
-          allergyDetails: aiInfo.allergy_details || null,
+          allergyWarning: directAllergy ? directAllergy.warning : (aiInfo.allergy_warning || false),
+          allergyDetails: directAllergy ? directAllergy.details : (aiInfo.allergy_details || null),
           alternatives,
           therapeuticAlternatives: therapeuticAlts,
           priceNote: null,
@@ -126,8 +147,8 @@ class MedicineService {
           },
           uses: [],
           sideEffects: [],
-          allergyWarning: false,
-          allergyDetails: null,
+          allergyWarning: directAllergy ? directAllergy.warning : false,
+          allergyDetails: directAllergy ? directAllergy.details : null,
           alternatives,
           therapeuticAlternatives: [],
           priceNote: null,
@@ -200,6 +221,8 @@ class MedicineService {
         )
       : [];
 
+    const directAllergy = this.checkDirectAllergy(aiInfo.brand_name || medicineName, aiInfo.composition, userAllergies);
+
     return {
       dataSource: alternatives.length > 0 ? 'ai_generated_with_local_price' : 'ai_generated_no_price_data',
       medicineInfo: {
@@ -210,8 +233,8 @@ class MedicineService {
       },
       uses,
       sideEffects,
-      allergyWarning: aiInfo.allergy_warning || false,
-      allergyDetails: aiInfo.allergy_details || null,
+      allergyWarning: directAllergy ? directAllergy.warning : (aiInfo.allergy_warning || false),
+      allergyDetails: directAllergy ? directAllergy.details : (aiInfo.allergy_details || null),
       alternatives: alternatives.length > 0 ? alternatives : aiSubstitutes,
       therapeuticAlternatives: therapeuticAlts,
       priceNote: alternatives.length === 0 && aiSubstitutes.length > 0 ? 'Prices are approximate based on AI training data (may be outdated). Please verify current prices with pharmacist.' : alternatives.length === 0 ? 'No matching price data available in local database.' : null,

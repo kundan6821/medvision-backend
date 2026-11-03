@@ -98,9 +98,14 @@ class MedicineController {
         // Extract text from image using OCR
         const ocrResult = await this.ocrService.extractTextFromImage(imagePath);
 
-        // Auto-fetch user allergies from token if present
+        // Auto-fetch user allergies from body/query or token
         let userAllergies = [];
-        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+        const passedAllergies = req.body?.allergies || req.query?.allergies;
+        if (passedAllergies) {
+          userAllergies = (Array.isArray(passedAllergies) ? passedAllergies : passedAllergies.split(','))
+            .map(a => a.trim())
+            .filter(Boolean);
+        } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
           const jwt = require('jsonwebtoken');
           const config = require('../config/env.config');
           const UserService = require('../services/user.service');
